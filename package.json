@@ -1,0 +1,26 @@
+{
+  "name": "java-htmlunit-scraper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jakedamico/Auditors-Website-Scraper.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jakedamico/Auditors-Website-Scraper/issues"
+  },
+  "homepage": "https://github.com/jakedamico/Auditors-Website-Scraper#readme",
+  "dependencies": {
+    "exceljs": "^4.3.0",
+    "google-spreadsheet": "^3.3.0",
+    "puppeteer": "^15.3.1",
+    "xlsx": "file:vendor/xlsx-0.18.9.tgz"
+  }
+}
