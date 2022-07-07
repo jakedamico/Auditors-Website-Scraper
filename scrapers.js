@@ -45,36 +45,39 @@ async function getAddressStreet(rowNumber) {
     return street;
 }
 
-async function scrapeProduct(i) {
-    const addressStreet = await getAddressStreet(i);
-    const addressNumber = await getAddressNumber(i);
+async function scrapeProduct(iterations) {
 
-    const browser = await puppeteer.launch({
-        headless: false,
-        slowMo: 10,
-        devtools: false,
-    });
-    const page = await browser.newPage();
-    await page.goto('https://wedge.hcauditor.org/');
+    for (let i = 2; i <= iterations + 1; i++) {
 
-    await page.type('#house_number_low', addressNumber);
-    await page.type('#street_name', addressStreet);
-    await Promise.all([
-        page.click('#search_by_street_address > div:nth-child(4) > button.fg-button.ui-priority-primary.ui-button.ui-widget.ui-state-default.ui-corner-all.ui-button-text-only'),
-        page.waitForNavigation({ waitUntil: 'networkidle2' })
-    ]);
+        const addressStreet = await getAddressStreet(i);
+        const addressNumber = await getAddressNumber(i);
 
-    const [el] = await page.$x('//*[@id="property_information"]/tbody/tr[3]/td[1]/div[2]')// LLC
-    const txt = await el.getProperty('textContent');
-    const rawTxt = await txt.jsonValue();
+        const browser = await puppeteer.launch({
+            headless: false,
+            slowMo: 10,
+            devtools: false,
+        });
+        const page = await browser.newPage();
+        await page.goto('https://wedge.hcauditor.org/');
 
-    inputToSheets(rawTxt, 'B' + i);
+        await page.type('#house_number_low', addressNumber);
+        await page.type('#street_name', addressStreet);
+        await Promise.all([
+            page.click('#search_by_street_address > div:nth-child(4) > button.fg-button.ui-priority-primary.ui-button.ui-widget.ui-state-default.ui-corner-all.ui-button-text-only'),
+            page.waitForNavigation({ waitUntil: 'networkidle2' })
+        ]);
 
-    browser.close();
+        const [el] = await page.$x('//*[@id="property_information"]/tbody/tr[3]/td[1]/div[2]')// LLC
+        const txt = await el.getProperty('textContent');
+        const rawTxt = await txt.jsonValue();
+
+        inputToSheets(rawTxt, 'B' + i);
+
+        browser.close();
+    }
 }
 
 scrapeProduct(2)
-scrapeProduct(3)
 
 //getAddressNumber(2);
 
