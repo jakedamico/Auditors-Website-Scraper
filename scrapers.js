@@ -6,15 +6,15 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 
 const creds = require('./client_secret.json')
 
-async function inputLLC(llcName) {
+async function inputToSheets(text, cellNumber) {
     const doc = new GoogleSpreadsheet('1yoalYKIQD7hpKPnaDweTuZQo2X28Z1gk79VNWc3_l9s');
     await doc.useServiceAccountAuth(creds);
     await doc.loadInfo();
     const sheet = doc.sheetsByIndex[0];
 
-    await sheet.loadCells('A1:C2');
-    const cell = sheet.getCellByA1('C2');
-    cell.value = llcName;
+    await sheet.loadCells('A1:P515');
+    const cell = sheet.getCellByA1(cellNumber);
+    cell.value = text;
     await sheet.saveUpdatedCells();
 }
 
@@ -64,16 +64,17 @@ async function scrapeProduct(i) {
         page.waitForNavigation({ waitUntil: 'networkidle2' })
     ]);
 
-    const [el] = await page.$x('//*[@id="parcel-header-info"]/div[1]')// parcel id
+    const [el] = await page.$x('//*[@id="property_information"]/tbody/tr[3]/td[1]/div[2]')// LLC
     const txt = await el.getProperty('textContent');
     const rawTxt = await txt.jsonValue();
 
-    inputLLC(rawTxt);
+    inputToSheets(rawTxt, 'B' + i);
 
     browser.close();
 }
 
 scrapeProduct(2)
+scrapeProduct(3)
 
 //getAddressNumber(2);
 
