@@ -18,7 +18,7 @@ async function inputToSheets(text, cellNumber) {
     await sheet.saveUpdatedCells();
 }
 
-async function getAddressNumber(rowNumber) {
+async function parcelGrabber(rowNumber) {
     const doc = new GoogleSpreadsheet('1yoalYKIQD7hpKPnaDweTuZQo2X28Z1gk79VNWc3_l9s');
     await doc.useServiceAccountAuth(creds);
     await doc.loadInfo();
@@ -26,59 +26,69 @@ async function getAddressNumber(rowNumber) {
 
     await sheet.loadCells('A:A');
     const cell = sheet.getCellByA1('A' + rowNumber);
-    const address = cell.value.split(' ');
-    return address[0];
+
+    let parcelID = cell.value.toString()
+    var webCode = parcelID.replace(/-/g, "");
+
+    return webCode;
 }
 
-async function getAddressStreet(rowNumber) {
-    const doc = new GoogleSpreadsheet('1yoalYKIQD7hpKPnaDweTuZQo2X28Z1gk79VNWc3_l9s');
-    await doc.useServiceAccountAuth(creds);
-    await doc.loadInfo();
-    const sheet = doc.sheetsByIndex[0];
+async function scrapeProduct(rowNumber) {
 
-    await sheet.loadCells('A:A');
-    const cell = sheet.getCellByA1('A' + rowNumber);
-    const address = cell.value.split(' ');
-    address.shift()
-    let street = address.join(" ");
+    const parcelID = await parcelGrabber(rowNumber);
 
-    return street;
+    const browser = await puppeteer.launch({
+        headless: false,
+        slowMo: 10,
+        devtools: false,
+    });
+
+    const page = await browser.newPage();
+
+    //await Promise.all([
+    await page.goto('https://wedge.hcauditor.org/view/re/' + parcelID + '/2021/summary');
+    //await page.waitForNavigation({ waitUntil: 'networkidle2' })
+    //]);
+
+    const [el] = await page.$x('//*[@id="property_information"]/tbody/tr[2]/td[1]/div[2]');// Appraisal Area
+    const txt = await el.getProperty('textContent');
+    const rawTxt = await txt.jsonValue();
+    await inputToSheets(rawTxt, 'B' + rowNumber);
+
+    const [el1] = await page.$x('//*[@id="property_overview_wrapper"]/table[1]/tbody/tr[6]/td[2]');//transfer date
+    const txt1 = await el1.getProperty('textContent');
+    const rawTxt1 = await txt1.jsonValue();
+    await inputToSheets(rawTxt1, 'N' + rowNumber);
+
+    const [el2] = await page.$x('//*[@id="property_overview_wrapper"]/table[1]/tbody/tr[7]/td[2]');//sale amount
+    const txt2 = await el2.getProperty('textContent');
+    const rawTxt2 = await txt2.jsonValue();
+    await inputToSheets(rawTxt2, 'O' + rowNumber);
+
+    const [el3] = await page.$x('//*[@id="property_information"]/tbody/tr[3]/td[2]/div[2]');//mailing address
+    const txt3 = await el3.getProperty('textContent');
+    const rawTxt3 = await txt3.jsonValue();
+    let addressStreet = rawTxt3.split("\n");
+    await inputToSheets(addressStreet[1], 'H' + rowNumber);
+
+    let addressCity = addressStreet[2]; //city
+    let addressCityPrint = addressCity.split(" ");
+    await inputToSheets(addressCityPrint[0], 'I' + rowNumber);
+
+    await inputToSheets(addressCityPrint[1], 'J' + rowNumber);//state
+
+    await inputToSheets(addressCityPrint[2], 'K' + rowNumber);//zip code
+
+
+    browser.close();
 }
 
-async function scrapeProduct(iterations) {
 
+async function runScraper(iterations) {
     for (let i = 2; i <= iterations + 1; i++) {
-
-        const addressStreet = await getAddressStreet(i);
-        const addressNumber = await getAddressNumber(i);
-
-        const browser = await puppeteer.launch({
-            headless: false,
-            slowMo: 10,
-            devtools: false,
-        });
-        const page = await browser.newPage();
-        await page.goto('https://wedge.hcauditor.org/');
-
-        await page.type('#house_number_low', addressNumber);
-        await page.type('#street_name', addressStreet);
-        await Promise.all([
-            page.click('#search_by_street_address > div:nth-child(4) > button.fg-button.ui-priority-primary.ui-button.ui-widget.ui-state-default.ui-corner-all.ui-button-text-only'),
-            page.waitForNavigation({ waitUntil: 'networkidle2' })
-        ]);
-
-        const [el] = await page.$x('//*[@id="property_information"]/tbody/tr[3]/td[1]/div[2]')// LLC
-        const txt = await el.getProperty('textContent');
-        const rawTxt = await txt.jsonValue();
-
-        inputToSheets(rawTxt, 'B' + i);
-
-        browser.close();
+        await scrapeProduct(i);
     }
 }
 
-scrapeProduct(2)
-
-//getAddressNumber(2);
-
+runScraper(2);
 
