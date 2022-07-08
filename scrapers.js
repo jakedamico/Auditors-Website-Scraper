@@ -12,7 +12,7 @@ async function inputToSheets(text, cellNumber) {
     await doc.loadInfo();
     const sheet = doc.sheetsByIndex[0];
 
-    await sheet.loadCells('A1:P515');
+    await sheet.loadCells(cellNumber);
     const cell = sheet.getCellByA1(cellNumber);
     cell.value = text;
     await sheet.saveUpdatedCells();
@@ -24,7 +24,7 @@ async function parcelGrabber(rowNumber) {
     await doc.loadInfo();
     const sheet = doc.sheetsByIndex[0];
 
-    await sheet.loadCells('A:A');
+    await sheet.loadCells('A' + rowNumber);
     const cell = sheet.getCellByA1('A' + rowNumber);
 
     let parcelID = cell.value.toString()
@@ -38,17 +38,15 @@ async function scrapeProduct(rowNumber) {
     const parcelID = await parcelGrabber(rowNumber);
 
     const browser = await puppeteer.launch({
-        headless: false,
-        slowMo: 10,
+        //headless: false,
+        //slowMo: 10,
         devtools: false,
     });
 
     const page = await browser.newPage();
 
-    //await Promise.all([
     await page.goto('https://wedge.hcauditor.org/view/re/' + parcelID + '/2021/summary');
-    //await page.waitForNavigation({ waitUntil: 'networkidle2' })
-    //]);
+
 
     const [el] = await page.$x('//*[@id="property_information"]/tbody/tr[2]/td[1]/div[2]');// Appraisal Area
     const txt = await el.getProperty('textContent');
@@ -79,6 +77,7 @@ async function scrapeProduct(rowNumber) {
 
     await inputToSheets(addressCityPrint[2], 'K' + rowNumber);//zip code
 
+    await page.waitForTimeout(20000) //for google sheets api limits
 
     browser.close();
 }
@@ -90,5 +89,5 @@ async function runScraper(iterations) {
     }
 }
 
-runScraper(2);
+runScraper(476);
 
